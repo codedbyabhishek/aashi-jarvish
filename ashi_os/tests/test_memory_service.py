@@ -18,6 +18,15 @@ def test_memory_add_and_search_non_crash() -> None:
         max_context_tokens=8000,
         memory_top_k=3,
         memory_on_chat=False,
+        wake_phrase="hey aashi",
+        default_tts_voice="Samantha",
+        voice_inbox_dir=Path("./data/voice/inbox"),
+        voice_processed_dir=Path("./data/voice/processed"),
+        voice_poll_interval_sec=1.0,
+        mic_sample_rate=16000,
+        mic_chunk_seconds=2.0,
+        mic_channels=1,
+        mic_device_index=None,
     )
     memory = MemoryService(settings)
     memory.add_memory("s1", "remember this", {"tag": "x"})

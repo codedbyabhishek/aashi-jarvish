@@ -20,6 +20,18 @@ data/chroma/*
 !data/logs/.gitkeep
 data/logs/*
 !data/logs/.gitkeep
+!data/voice/
+!data/voice/inbox/
+!data/voice/inbox/.gitkeep
+!data/voice/processed/
+!data/voice/processed/.gitkeep
+data/voice/*
+!data/voice/inbox/
+!data/voice/processed/
+data/voice/inbox/*
+!data/voice/inbox/.gitkeep
+data/voice/processed/*
+!data/voice/processed/.gitkeep
 *.db
 ashi_os.egg-info/
 
