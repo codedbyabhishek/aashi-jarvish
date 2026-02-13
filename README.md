@@ -8,7 +8,9 @@ Aashi is a structured, modular personal assistant you can run locally from termi
 - `aashi/voice.py` - system voice and custom audio-file playback
 - `aashi/ai.py` - optional OpenAI response provider
 - `aashi/assistant.py` - command routing and assistant orchestration
+- `aashi/gui.py` - modern desktop user interface (chat + voice controls)
 - `main.py` - terminal chat runner
+- `run_ui.py` - desktop UI runner
 
 ## Features
 - Clean command-based assistant loop
@@ -24,6 +26,14 @@ cd "/Users/abhishekkumar/Documents/New project"
 python3 -m venv .venv
 source .venv/bin/activate
 python3 main.py
+```
+
+## Launch The UI
+
+```bash
+cd "/Users/abhishekkumar/Documents/New project"
+source .venv/bin/activate
+python3 run_ui.py
 ```
 
 ## Commands
