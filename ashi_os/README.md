@@ -1,4 +1,4 @@
-# ASHI OS Phase 1 + Phase 2 + Phase 3
+# ASHI OS Phase 1 + Phase 2 + Phase 3 + Phase 4
 
 ## Scope
 - LLM router (Ollama primary + OpenAI fallback)
@@ -10,6 +10,7 @@
 - Voice command pipeline (STT + wake phrase + TTS)
 - Continuous listening runtime (file inbox queue)
 - Tool execution layer (system/files/browser/code/email/scheduler)
+- Strategic planning engine (plan decomposition + risk scoring + confirmation tokens)
 
 ## Run
 ```bash
@@ -105,6 +106,24 @@ curl -s -X POST http://127.0.0.1:8787/voice/mic/stop
 - Filesystem tool cannot escape workspace root.
 - File deletion requires explicit `confirm=true`.
 - Code runner allows only safe command prefixes and blocks destructive tokens.
+- High-risk chat intents trigger confirmation token challenge before execution.
+
+## Phase 4 Chat Contract
+`POST /chat` now returns planning + risk metadata:
+- `plan.objective`
+- `plan.steps[]`
+- `risk.level` (`low|medium|high`)
+- `risk.score`
+- `risk.reasons[]`
+- `confirmation_required`
+- `confirmation_token` (when confirmation is required)
+
+If confirmation is required, continue with:
+```bash
+curl -s -X POST http://127.0.0.1:8787/chat \
+  -H 'content-type: application/json' \
+  -d '{"session_id":"phase4","user_message":"confirm <token>"}'
+```
 
 ## Phase 3 Tool Execution Examples
 List supported tools:

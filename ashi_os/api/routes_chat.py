@@ -8,8 +8,8 @@ router = APIRouter(tags=["chat"])
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest, request: Request) -> ChatResponse:
     orchestrator = request.app.state.orchestrator
-    reply, provider, model = orchestrator.chat(session_id=payload.session_id, user_message=payload.user_message)
-    return ChatResponse(session_id=payload.session_id, reply=reply, provider=provider, model=model)
+    result = orchestrator.chat(session_id=payload.session_id, user_message=payload.user_message)
+    return ChatResponse(session_id=payload.session_id, **result)
 
 
 @router.post("/memory/add")

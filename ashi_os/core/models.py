@@ -11,6 +11,10 @@ class ChatResponse(BaseModel):
     reply: str
     provider: str
     model: str
+    plan: dict = Field(default_factory=dict)
+    risk: dict = Field(default_factory=dict)
+    confirmation_required: bool = False
+    confirmation_token: str | None = None
 
 
 class MemoryAddRequest(BaseModel):
