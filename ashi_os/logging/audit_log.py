@@ -8,6 +8,7 @@ from ashi_os.core.security import redact_secrets
 
 class AuditLogger:
     def __init__(self, log_dir: Path) -> None:
+        log_dir.mkdir(parents=True, exist_ok=True)
         self.path = log_dir / "audit.jsonl"
 
     def write(self, event: str, payload: dict[str, Any]) -> None:

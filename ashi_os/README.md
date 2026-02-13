@@ -1,4 +1,4 @@
-# ASHI OS Phase 1
+# ASHI OS Phase 1 + Phase 2 + Phase 3
 
 ## Scope
 - LLM router (Ollama primary + OpenAI fallback)
@@ -7,13 +7,16 @@
 - Context manager
 - Structured logging + audit log
 - FastAPI service for chat and memory endpoints
+- Voice command pipeline (STT + wake phrase + TTS)
+- Continuous listening runtime (file inbox queue)
+- Tool execution layer (system/files/browser/code/email/scheduler)
 
 ## Run
 ```bash
 cd "/Users/abhishekkumar/Documents/New project"
 source .venv/bin/activate
 pip install -e .
-uvicorn ashi_os.api.app:app --reload --port 8787
+ANONYMIZED_TELEMETRY=False uvicorn ashi_os.api.app:app --reload --port 8787
 ```
 
 ## Endpoints
@@ -23,28 +26,115 @@ uvicorn ashi_os.api.app:app --reload --port 8787
 - `POST /memory/add`
 - `POST /memory/search`
 - `POST /voice/command-file`
-
-## Quick Test
-```bash
-curl -s http://127.0.0.1:8787/health
-
-curl -s -X POST http://127.0.0.1:8787/chat \
-  -H 'content-type: application/json' \
-  -d '{"session_id":"demo","user_message":"Create a 3-step plan to set up wake word"}'
-```
-
-## Security Notes
-- Secrets are loaded from env, never hardcoded.
-- Audit logs redact token-like patterns.
-- Destructive command patterns are blocked with confirmation requirement.
+- `POST /voice/start`
+- `POST /voice/stop`
+- `GET /voice/status`
+- `POST /voice/mic/start`
+- `POST /voice/mic/stop`
+- `GET /voice/mic/status`
+- `GET /tools/catalog`
+- `POST /tools/execute`
+- `POST /scheduler/jobs`
+- `GET /scheduler/jobs`
+- `POST /scheduler/run-due`
 
 ## Startup Performance
 - `MEMORY_ON_CHAT=false` (default) keeps chat startup non-blocking.
 - Semantic memory retrieval runs only when you call memory endpoints.
 - Set `MEMORY_ON_CHAT=true` after first embedding model warm-up if desired.
 
-## Phase 2 Voice Interface (Scaffold)
-- `ashi_os/voice/stt.py`: speech-to-text from file (OpenAI transcription)
-- `ashi_os/voice/wake_word.py`: wake phrase parsing (`hey aashi`)
-- `ashi_os/voice/tts.py`: text-to-speech via macOS `say`
-- `ashi_os/voice/listener.py`: end-to-end voice command pipeline
+## Phase 2 Continuous Listening
+Input queue folder:
+- `./data/voice/inbox`
+
+Processed archive folder:
+- `./data/voice/processed`
+
+Set env options if needed:
+- `WAKE_PHRASE=hey aashi`
+- `DEFAULT_TTS_VOICE=Samantha`
+- `VOICE_POLL_INTERVAL_SEC=1.0`
+
+Start continuous listener:
+```bash
+curl -s -X POST http://127.0.0.1:8787/voice/start \
+  -H 'content-type: application/json' \
+  -d '{"session_id":"voice-main","speak_reply":true}'
+```
+
+Check status:
+```bash
+curl -s http://127.0.0.1:8787/voice/status
+```
+
+Drop voice files (wav/mp3) into inbox:
+- `./data/voice/inbox`
+
+Stop listener:
+```bash
+curl -s -X POST http://127.0.0.1:8787/voice/stop
+```
+
+## Phase 2 Microphone Capture
+Install mic capture dependencies:
+```bash
+source .venv/bin/activate
+pip install sounddevice numpy
+```
+
+Start microphone chunk capture:
+```bash
+curl -s -X POST http://127.0.0.1:8787/voice/mic/start
+```
+
+Check mic status:
+```bash
+curl -s http://127.0.0.1:8787/voice/mic/status
+```
+
+Stop microphone capture:
+```bash
+curl -s -X POST http://127.0.0.1:8787/voice/mic/stop
+```
+
+## Security Notes
+- Secrets are loaded from env, never hardcoded.
+- Audit logs redact token-like patterns.
+- Destructive command patterns are blocked with confirmation requirement.
+- Continuous listener only executes wake-phrase gated commands.
+- Filesystem tool cannot escape workspace root.
+- File deletion requires explicit `confirm=true`.
+- Code runner allows only safe command prefixes and blocks destructive tokens.
+
+## Phase 3 Tool Execution Examples
+List supported tools:
+```bash
+curl -s http://127.0.0.1:8787/tools/catalog
+```
+
+Execute a safe filesystem action:
+```bash
+curl -s -X POST http://127.0.0.1:8787/tools/execute \\
+  -H 'content-type: application/json' \\
+  -d '{
+    "session_id":"ops-1",
+    "tool":"filesystem",
+    "action":"list",
+    "params":{"path":"."}
+  }'
+```
+
+Schedule a job and run due tasks:
+```bash
+curl -s -X POST http://127.0.0.1:8787/scheduler/jobs \\
+  -H 'content-type: application/json' \\
+  -d '{
+    "session_id":"ops-1",
+    "run_at":"1970-01-01T00:00:00+00:00",
+    "tool":"filesystem",
+    "action":"write",
+    "params":{"path":"data/phase3.txt","content":"phase3 online"}
+  }'
+
+curl -s -X POST http://127.0.0.1:8787/scheduler/run-due
+```
