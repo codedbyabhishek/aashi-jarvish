@@ -10,6 +10,8 @@ DEFAULT_STATE: dict[str, Any] = {
         "name": "Samantha",
         "mode": "system",
         "file": "",
+        "clone_id": "",
+        "clone_name": "",
     },
 }
 
@@ -51,8 +53,10 @@ class MemoryStore:
         voice.setdefault("name", "Samantha")
         voice.setdefault("mode", "system")
         voice.setdefault("file", "")
+        voice.setdefault("clone_id", "")
+        voice.setdefault("clone_name", "")
 
-        if voice["mode"] not in {"system", "file"}:
+        if voice["mode"] not in {"system", "file", "clone"}:
             voice["mode"] = "system"
 
     def save(self) -> None:
@@ -88,7 +92,7 @@ class MemoryStore:
 
     def voice_mode(self) -> str:
         mode = str(self.data.get("voice", {}).get("mode", "system"))
-        return mode if mode in {"system", "file"} else "system"
+        return mode if mode in {"system", "file", "clone"} else "system"
 
     def set_voice_mode(self, mode: str) -> None:
         self.data.setdefault("voice", {})["mode"] = mode
@@ -99,4 +103,16 @@ class MemoryStore:
 
     def set_voice_file(self, filename: str) -> None:
         self.data.setdefault("voice", {})["file"] = filename
+        self.save()
+
+    def clone_voice_id(self) -> str:
+        return str(self.data.get("voice", {}).get("clone_id", ""))
+
+    def clone_voice_name(self) -> str:
+        return str(self.data.get("voice", {}).get("clone_name", ""))
+
+    def set_clone_voice(self, voice_id: str, voice_name: str) -> None:
+        voice = self.data.setdefault("voice", {})
+        voice["clone_id"] = voice_id
+        voice["clone_name"] = voice_name
         self.save()

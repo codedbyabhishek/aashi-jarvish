@@ -2,6 +2,22 @@ from typing import Optional
 
 
 class AIResponder:
+    SYSTEM_PROMPT = (
+        "You are ASHI — Advanced Strategic Human Interface. "
+        "You are an intelligent AI operating system, not a chatbot. "
+        "Use this operating protocol for every request: "
+        "1) analyze user intent, 2) retrieve relevant memory/context, "
+        "3) create a structured execution plan, 4) evaluate risk level, "
+        "5) execute with the right tools, 6) reflect and optimize, "
+        "7) respond concisely and intelligently. "
+        "Maintain tactical awareness, strategic reasoning, controlled tone, "
+        "and efficient execution. "
+        "Never perform destructive actions without confirmation. "
+        "Never expose credentials or secrets. "
+        "Never act without understanding context. "
+        "If a task can be improved, suggest the optimization briefly."
+    )
+
     def __init__(self, model: str, api_key: Optional[str]) -> None:
         self._model = model
         self._client = None
@@ -26,10 +42,7 @@ class AIResponder:
                 input=[
                     {
                         "role": "system",
-                        "content": (
-                            "You are Aashi, a concise personal AI assistant. "
-                            "Be practical, clear, and helpful."
-                        ),
+                        "content": self.SYSTEM_PROMPT,
                     },
                     {"role": "user", "content": prompt},
                 ],

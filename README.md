@@ -1,37 +1,40 @@
 # Aashi - Your Personal Jarvish
 
-Aashi is a structured, modular personal assistant you can run locally from terminal.
+Aashi is a structured, modular personal assistant you can run locally from terminal or desktop UI.
 
 ## Architecture
 - `aashi/config.py` - runtime config (memory path, voice folder, model)
 - `aashi/memory.py` - persistent state store (`notes`, voice settings)
-- `aashi/voice.py` - system voice and custom audio-file playback
-- `aashi/ai.py` - optional OpenAI response provider
-- `aashi/assistant.py` - command routing and assistant orchestration
-- `aashi/gui.py` - modern desktop user interface (chat + voice controls)
-- `main.py` - terminal chat runner
-- `run_ui.py` - desktop UI runner
+- `aashi/ai.py` - AI brain (OpenAI LLM responder)
+- `aashi/voice_input.py` - voice input (transcribe command audio files)
+- `aashi/voice.py` - voice output (system voice and file playback)
+- `aashi/clone_voice.py` - cloned voice output via ElevenLabs
+- `aashi/system_control.py` - system actions (open apps/web, run shortcuts)
+- `aashi/pipeline/input_layer.py` - normalize incoming input
+- `aashi/pipeline/router.py` - intent detection + routing
+- `aashi/pipeline/brain.py` - LLM reasoning layer
+- `aashi/pipeline/planner.py` - task planning layer
+- `aashi/pipeline/tools.py` - tool executor layer
+- `aashi/pipeline/response.py` - response generation
+- `aashi/assistant.py` - orchestrates the full pipeline
+- `aashi/gui.py` - desktop UI (chat + controls)
+- `main.py` - terminal runner
+- `run_ui.py` - UI runner
 
-## Features
-- Clean command-based assistant loop
-- Local memory persistence in `aashi_memory.json`
-- Offline-first operation
-- Optional cloud AI responses (`OPENAI_API_KEY`)
-- Voice output with system voices or your own file from `./save`
+## End-to-End Flow
+- User Voice/Text
+- Input Layer (Speech-to-Text)
+- Intent Detection + Router
+- AI Brain (LLM + Memory)
+- Task Planner (Agent)
+- Tool Executor Layer
+- Response Generator
+- Text-to-Speech
 
 ## Quick Start
-
 ```bash
 cd "/Users/abhishekkumar/Documents/New project"
 python3 -m venv .venv
-source .venv/bin/activate
-python3 main.py
-```
-
-## Launch The UI
-
-```bash
-cd "/Users/abhishekkumar/Documents/New project"
 source .venv/bin/activate
 python3 run_ui.py
 ```
@@ -46,26 +49,36 @@ python3 run_ui.py
 - `voice <name>`
 - `voice mode system`
 - `voice mode file`
+- `voice mode clone`
 - `voicefiles`
 - `voicefile <filename>`
+- `listen <filename>`
+- `clonevoice <filename> [name]`
+- `clone status`
+- `open app <name>`
+- `open web <url>`
+- `search web <query>`
+- `run shortcut <name>`
 - `voice on`
 - `voice off`
 - `exit` / `quit`
 
-## Custom Voice File
-1. Put your file in `./save` (for example `myvoice.wav` or `myvoice.mp3`).
-2. In Aashi:
-   - `voicefiles`
-   - `voicefile myvoice.wav`
-   - `voice on`
+## Setup For Full Capabilities
 
-Aashi will play your selected file for each response in file mode.
-
-## Optional OpenAI Setup
-If you want dynamic AI responses (internet required):
-
+### AI Brain + Voice Input (OpenAI)
 ```bash
 pip install openai
 export OPENAI_API_KEY="your_key_here"
-python3 main.py
 ```
+
+### Cloned Voice Output (ElevenLabs)
+```bash
+export ELEVENLABS_API_KEY="your_key_here"
+```
+
+### Your Own Voice File
+Put `.wav`/`.mp3` in `./save`, then in Aashi:
+- `voicefile yourfile.wav`
+- `clonevoice yourfile.wav Aashi Clone` (optional)
+- `voice mode clone` (or `voice mode file`)
+- `voice on`
