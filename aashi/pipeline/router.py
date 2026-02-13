@@ -47,6 +47,22 @@ class IntentRouter:
         if lower.startswith("listen "):
             return Intent("voice_input", {"filename": text[7:].strip()})
 
+        if lower == "wake on":
+            return Intent("wake_on")
+        if lower == "wake off":
+            return Intent("wake_off")
+        if lower == "wake status":
+            return Intent("wake_status")
+        if lower.startswith("wake phrase "):
+            return Intent("wake_phrase", {"phrase": text[12:].strip()})
+
+        if lower == "setup openai":
+            return Intent("setup_openai")
+        if lower == "setup elevenlabs":
+            return Intent("setup_elevenlabs")
+        if lower == "setup status":
+            return Intent("setup_status")
+
         if lower.startswith("open app "):
             return Intent("system_action", {"text": text})
         if lower.startswith("open web "):

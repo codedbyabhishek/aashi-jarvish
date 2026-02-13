@@ -123,3 +123,6 @@ class CloneVoiceEngine:
             return False, "Audio playback failed."
 
         return False, "No audio player found (afplay/ffplay)."
+
+    def has_api_key(self) -> bool:
+        return bool(self.api_key.strip())

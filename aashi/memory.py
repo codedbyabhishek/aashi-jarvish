@@ -5,6 +5,10 @@ from typing import Any
 
 DEFAULT_STATE: dict[str, Any] = {
     "notes": [],
+    "wake": {
+        "enabled": True,
+        "phrase": "hey aashi",
+    },
     "voice": {
         "enabled": False,
         "name": "Samantha",
@@ -43,6 +47,12 @@ class MemoryStore:
 
     def _normalize(self) -> None:
         self.data.setdefault("notes", [])
+        wake = self.data.setdefault("wake", {})
+        if not isinstance(wake, dict):
+            wake = {}
+            self.data["wake"] = wake
+        wake.setdefault("enabled", True)
+        wake.setdefault("phrase", "hey aashi")
 
         voice = self.data.setdefault("voice", {})
         if not isinstance(voice, dict):
@@ -74,6 +84,22 @@ class MemoryStore:
         notes = self.notes()
         notes.append(text)
         self.data["notes"] = notes
+        self.save()
+
+    def wake_enabled(self) -> bool:
+        return bool(self.data.get("wake", {}).get("enabled", True))
+
+    def set_wake_enabled(self, enabled: bool) -> None:
+        wake = self.data.setdefault("wake", {})
+        wake["enabled"] = enabled
+        self.save()
+
+    def wake_phrase(self) -> str:
+        return str(self.data.get("wake", {}).get("phrase", "hey aashi")).strip() or "hey aashi"
+
+    def set_wake_phrase(self, phrase: str) -> None:
+        wake = self.data.setdefault("wake", {})
+        wake["phrase"] = phrase.strip() or "hey aashi"
         self.save()
 
     def voice_enabled(self) -> bool:

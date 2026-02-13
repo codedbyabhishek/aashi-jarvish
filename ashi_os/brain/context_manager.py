@@ -1,0 +1,28 @@
+from typing import Any
+
+from ashi_os.core.config import Settings
+from ashi_os.memory.memory_service import MemoryService
+
+
+class ContextManager:
+    def __init__(self, settings: Settings, memory: MemoryService) -> None:
+        self.settings = settings
+        self.memory = memory
+
+    def build(self, session_id: str, user_message: str, history: list[dict[str, str]]) -> str:
+        recalled = []
+        if self.settings.memory_on_chat:
+            recalled = self.memory.search(session_id=session_id, query=user_message, top_k=self.settings.memory_top_k)
+        memory_lines = [f"- {item['text']}" for item in recalled]
+        recent = history[-8:]
+        convo_lines = [f"{item['role']}: {item['content']}" for item in recent]
+
+        blocks = [
+            "[MEMORY]",
+            "\n".join(memory_lines) if memory_lines else "- none",
+            "[RECENT_CHAT]",
+            "\n".join(convo_lines) if convo_lines else "- none",
+            "[USER_REQUEST]",
+            user_message,
+        ]
+        return "\n".join(blocks)

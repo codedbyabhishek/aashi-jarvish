@@ -1,9 +1,13 @@
 import datetime as dt
+import re
 
 from .types import ExecutionResult
 
 
 class ToolExecutor:
+    OPENAI_SETUP_URL = "https://platform.openai.com/api-keys"
+    ELEVENLABS_SETUP_URL = "https://elevenlabs.io/app/settings/api-keys"
+
     def __init__(self, assistant) -> None:
         self.assistant = assistant
 
@@ -101,6 +105,19 @@ class ToolExecutor:
             clone_name = str(payload.get("name", "Aashi Custom Voice")).strip() or "Aashi Custom Voice"
             if not filename:
                 return ExecutionResult(True, "Use: clonevoice <filename> [name]")
+            if not self.assistant.clone_voice.has_api_key():
+                opened, _ = self.assistant.system_control.open_url(self.ELEVENLABS_SETUP_URL)
+                if opened:
+                    return ExecutionResult(
+                        True,
+                        "ELEVENLABS_API_KEY is missing. Opened ElevenLabs API key page. "
+                        "Create key, then run: export ELEVENLABS_API_KEY='your_key'",
+                    )
+                return ExecutionResult(
+                    True,
+                    "ELEVENLABS_API_KEY is missing. Open this page and create key: "
+                    f"{self.ELEVENLABS_SETUP_URL}",
+                )
             ok, voice_id, message = self.assistant.clone_voice.clone_from_file(filename, clone_name)
             if not ok:
                 return ExecutionResult(True, f"Clone failed: {message}")
@@ -119,13 +136,88 @@ class ToolExecutor:
             filename = str(payload.get("filename", "")).strip()
             if not filename:
                 return ExecutionResult(True, "Use: listen <filename>")
+            if not self.assistant.voice_input.has_api_key():
+                opened, _ = self.assistant.system_control.open_url(self.OPENAI_SETUP_URL)
+                if opened:
+                    return ExecutionResult(
+                        True,
+                        "OPENAI_API_KEY is missing. Opened OpenAI API key page. "
+                        "Create key, then run: export OPENAI_API_KEY='your_key'",
+                    )
+                return ExecutionResult(
+                    True,
+                    "OPENAI_API_KEY is missing. Open this page and create key: "
+                    f"{self.OPENAI_SETUP_URL}",
+                )
             ok, transcript = self.assistant.voice_input.transcribe_file(filename)
             if not ok:
                 return ExecutionResult(True, f"Voice input failed: {transcript}")
-            nested_reply = self.assistant.handle(transcript)
+            command_text = transcript.strip()
+            if self.assistant.memory.wake_enabled():
+                wake_phrase = self.assistant.memory.wake_phrase().lower()
+                lower = command_text.lower()
+                if wake_phrase not in lower:
+                    return ExecutionResult(
+                        True,
+                        f"Heard: {transcript}\nWake phrase not detected. Say '{self.assistant.memory.wake_phrase()}' first.",
+                    )
+                split = re.split(re.escape(wake_phrase), lower, maxsplit=1)
+                if len(split) == 2:
+                    suffix = split[1].strip(" ,.!?;:-")
+                    if not suffix:
+                        return ExecutionResult(True, f"Heard: {transcript}\nListening. Give a command after wake phrase.")
+                    start_index = lower.find(wake_phrase) + len(wake_phrase)
+                    command_text = transcript[start_index:].strip(" ,.!?;:-")
+            nested_reply = self.assistant.handle(command_text)
             if nested_reply == self.assistant.EXIT_SIGNAL:
                 return ExecutionResult(True, f"Heard: {transcript}\nAashi: Goodbye.")
             return ExecutionResult(True, f"Heard: {transcript}\nAashi: {nested_reply}")
+
+        if kind == "wake_on":
+            self.assistant.memory.set_wake_enabled(True)
+            return ExecutionResult(True, f"Wake activation enabled. Phrase: '{self.assistant.memory.wake_phrase()}'.")
+
+        if kind == "wake_off":
+            self.assistant.memory.set_wake_enabled(False)
+            return ExecutionResult(True, "Wake activation disabled for voice input.")
+
+        if kind == "wake_status":
+            state = "enabled" if self.assistant.memory.wake_enabled() else "disabled"
+            return ExecutionResult(True, f"Wake status: {state}. Phrase: '{self.assistant.memory.wake_phrase()}'.")
+
+        if kind == "wake_phrase":
+            phrase = str(payload.get("phrase", "")).strip()
+            if not phrase:
+                return ExecutionResult(True, "Use: wake phrase <text>")
+            self.assistant.memory.set_wake_phrase(phrase.lower())
+            self.assistant.memory.set_wake_enabled(True)
+            return ExecutionResult(True, f"Wake phrase set to '{self.assistant.memory.wake_phrase()}'.")
+
+        if kind == "setup_openai":
+            opened, _ = self.assistant.system_control.open_url(self.OPENAI_SETUP_URL)
+            if opened:
+                return ExecutionResult(
+                    True,
+                    "Opened OpenAI API key page. Create key and run: export OPENAI_API_KEY='your_key'",
+                )
+            return ExecutionResult(True, f"Open this URL to create key: {self.OPENAI_SETUP_URL}")
+
+        if kind == "setup_elevenlabs":
+            opened, _ = self.assistant.system_control.open_url(self.ELEVENLABS_SETUP_URL)
+            if opened:
+                return ExecutionResult(
+                    True,
+                    "Opened ElevenLabs API key page. Create key and run: export ELEVENLABS_API_KEY='your_key'",
+                )
+            return ExecutionResult(True, f"Open this URL to create key: {self.ELEVENLABS_SETUP_URL}")
+
+        if kind == "setup_status":
+            openai_ready = "set" if self.assistant.voice_input.has_api_key() else "missing"
+            elevenlabs_ready = "set" if self.assistant.clone_voice.has_api_key() else "missing"
+            return ExecutionResult(
+                True,
+                f"Setup status: OPENAI_API_KEY={openai_ready}, ELEVENLABS_API_KEY={elevenlabs_ready}.",
+            )
 
         if kind == "system_action":
             ok, message = self.assistant.system_control.try_natural_action(str(payload.get("text", "")))

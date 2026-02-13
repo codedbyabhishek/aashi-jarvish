@@ -7,9 +7,21 @@ __pycache__/
 
 # Virtual environments
 .venv/
+.env
 
 # Local runtime state
 aashi_memory.json
+data/*
+!data/chroma/
+!data/chroma/.gitkeep
+data/chroma/*
+!data/chroma/.gitkeep
+!data/logs/
+!data/logs/.gitkeep
+data/logs/*
+!data/logs/.gitkeep
+*.db
+ashi_os.egg-info/
 
 # Local user voice assets
 save/*

@@ -38,3 +38,6 @@ class VoiceInputEngine:
             return True, text
         except Exception:
             return False, "Voice transcription failed."
+
+    def has_api_key(self) -> bool:
+        return bool(self.api_key.strip())

@@ -60,6 +60,8 @@ class AashiAssistant:
             "Commands: help, time, date, notes, save <text>, voices, voice <name>, voice on, voice off,\n"
             "voice mode <system|file|clone>, voicefiles, voicefile <filename>, listen <filename>,\n"
             "clonevoice <filename> [name], clone status,\n"
+            "wake on, wake off, wake status, wake phrase <text>,\n"
+            "setup openai, setup elevenlabs, setup status,\n"
             "open app <name>, open web <url>, search web <query>, run shortcut <name>, exit\n"
             "You can also ask normal questions."
         )
