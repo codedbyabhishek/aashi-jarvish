@@ -1,4 +1,4 @@
-# ASHI OS Phase 1 + Phase 2 + Phase 3 + Phase 4
+# ASHI OS Phase 1 + Phase 2 + Phase 3 + Phase 4 + Phase 5
 
 ## Scope
 - LLM router (Ollama primary + OpenAI fallback)
@@ -11,6 +11,7 @@
 - Continuous listening runtime (file inbox queue)
 - Tool execution layer (system/files/browser/code/email/scheduler)
 - Strategic planning engine (plan decomposition + risk scoring + confirmation tokens)
+- Multi-agent coordinator (research/execution/validation/memory/supervisor)
 
 ## Run
 ```bash
@@ -38,6 +39,8 @@ ANONYMIZED_TELEMETRY=False uvicorn ashi_os.api.app:app --reload --port 8787
 - `POST /scheduler/jobs`
 - `GET /scheduler/jobs`
 - `POST /scheduler/run-due`
+- `GET /agents/status`
+- `POST /agents/run`
 
 ## Startup Performance
 - `MEMORY_ON_CHAT=false` (default) keeps chat startup non-blocking.
@@ -123,6 +126,28 @@ If confirmation is required, continue with:
 curl -s -X POST http://127.0.0.1:8787/chat \
   -H 'content-type: application/json' \
   -d '{"session_id":"phase4","user_message":"confirm <token>"}'
+```
+
+## Phase 5 Multi-Agent Contract
+Coordinator agents:
+- `research` - gather memory context for objective
+- `execution` - map plan steps to tool calls
+- `validation` - verify execution outcomes
+- `memory` - store post-run reflection
+- `supervisor` - produce mission summary
+
+Run in dry mode:
+```bash
+curl -s -X POST http://127.0.0.1:8787/agents/run \
+  -H 'content-type: application/json' \
+  -d '{"session_id":"agent-1","objective":"list files and summarize","auto_execute":false}'
+```
+
+Run with tool execution:
+```bash
+curl -s -X POST http://127.0.0.1:8787/agents/run \
+  -H 'content-type: application/json' \
+  -d '{"session_id":"agent-1","objective":"write file data/ops.txt::ready","auto_execute":true}'
 ```
 
 ## Phase 3 Tool Execution Examples

@@ -41,3 +41,16 @@ class ConfirmationManager:
 
     def has_pending(self, session_id: str) -> bool:
         return session_id in self._pending
+
+    def pending_token(self, session_id: str) -> str | None:
+        pending = self._pending.get(session_id)
+        return pending.token if pending else None
+
+    def consume_token(self, session_id: str, token: str) -> tuple[bool, str]:
+        pending = self._pending.get(session_id)
+        if pending is None:
+            return False, ""
+        if token.strip() == pending.token:
+            del self._pending[session_id]
+            return True, pending.original_message
+        return False, ""

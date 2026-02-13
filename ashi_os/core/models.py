@@ -55,3 +55,25 @@ class SchedulerCreateRequest(BaseModel):
     action: str = Field(min_length=1)
     params: dict = Field(default_factory=dict)
     confirm: bool = False
+
+
+class AgentRunRequest(BaseModel):
+    session_id: str = Field(min_length=1)
+    objective: str = Field(min_length=1)
+    auto_execute: bool = False
+    confirm_token: str | None = None
+
+
+class AgentRunResponse(BaseModel):
+    ok: bool = True
+    objective: str
+    plan: dict = Field(default_factory=dict)
+    risk: dict = Field(default_factory=dict)
+    research: dict = Field(default_factory=dict)
+    proposed_actions: list[dict] = Field(default_factory=list)
+    execution_results: list[dict] = Field(default_factory=list)
+    validation: dict = Field(default_factory=dict)
+    memory: dict = Field(default_factory=dict)
+    supervisor_summary: str = ""
+    confirmation_required: bool = False
+    confirmation_token: str | None = None

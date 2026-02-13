@@ -3,12 +3,21 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from ashi_os.api.routes_admin import router as admin_router
+from ashi_os.api.routes_agents import router as agents_router
 from ashi_os.api.routes_chat import router as chat_router
 from ashi_os.api.routes_tools import router as tools_router
 from ashi_os.api.routes_voice import router as voice_router
+from ashi_os.agents.coordinator import AgentCoordinator
+from ashi_os.agents.execution_agent import ExecutionAgent
+from ashi_os.agents.memory_agent import MemoryAgent
+from ashi_os.agents.research_agent import ResearchAgent
+from ashi_os.agents.supervisor_agent import SupervisorAgent
+from ashi_os.agents.validation_agent import ValidationAgent
+from ashi_os.brain.confirmation import ConfirmationManager
 from ashi_os.brain.context_manager import ContextManager
 from ashi_os.brain.llm_router import LLMRouter
 from ashi_os.brain.orchestrator import Orchestrator
+from ashi_os.brain.planning import RiskEvaluator, StrategicPlanner
 from ashi_os.core.config import get_settings
 from ashi_os.logging.audit_log import AuditLogger
 from ashi_os.logging.logger import configure_logging
@@ -63,6 +72,17 @@ def create_app() -> FastAPI:
         sqlite_path=settings.sqlite_path,
         audit=audit,
     )
+    agent_coordinator = AgentCoordinator(
+        research=ResearchAgent(memory=memory, top_k=settings.memory_top_k),
+        execution=ExecutionAgent(tool_executor=tool_executor),
+        validation=ValidationAgent(),
+        memory_agent=MemoryAgent(memory=memory),
+        supervisor=SupervisorAgent(),
+        planner=StrategicPlanner(),
+        risk_evaluator=RiskEvaluator(),
+        confirmation=ConfirmationManager(),
+        audit=audit,
+    )
 
     app = FastAPI(title="ASHI OS", version="0.1.0")
     app.state.settings = settings
@@ -73,8 +93,10 @@ def create_app() -> FastAPI:
     app.state.voice_runtime = voice_runtime
     app.state.mic_runtime = mic_runtime
     app.state.tool_executor = tool_executor
+    app.state.agent_coordinator = agent_coordinator
 
     app.include_router(admin_router)
+    app.include_router(agents_router)
     app.include_router(chat_router)
     app.include_router(voice_router)
     app.include_router(tools_router)
