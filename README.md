@@ -36,8 +36,20 @@ Aashi is a structured, modular personal assistant you can run locally from termi
 cd "/Users/abhishekkumar/Documents/New project"
 python3 -m venv .venv
 source .venv/bin/activate
+pip install -r requirements.txt
 python3 run_ui.py
 ```
+
+## ASHI Command Center UI
+- 3-panel holographic command-center layout
+- Animated ASHI core + waveform + live status indicators
+- Activity rail for operational events
+- Command history with `Up`/`Down`
+- Keyboard shortcuts:
+  - `Ctrl+Enter` -> execute input
+  - `Ctrl+L` -> clear console
+  - `Esc` -> focus command input
+- Preset tactical buttons for common checks
 
 ## Commands
 - `help`
@@ -55,6 +67,13 @@ python3 run_ui.py
 - `listen <filename>`
 - `clonevoice <filename> [name]`
 - `clone status`
+- `wake on`
+- `wake off`
+- `wake status`
+- `wake phrase <text>`
+- `setup openai`
+- `setup elevenlabs`
+- `setup status`
 - `open app <name>`
 - `open web <url>`
 - `search web <query>`
@@ -82,3 +101,9 @@ Put `.wav`/`.mp3` in `./save`, then in Aashi:
 - `clonevoice yourfile.wav Aashi Clone` (optional)
 - `voice mode clone` (or `voice mode file`)
 - `voice on`
+
+## Wake-Word Flow (File Voice Input)
+1. Add voice sample in `./save`.
+2. Say command in audio including wake phrase (default: `hey aashi`).
+3. Run `listen your_audio.wav`.
+4. ASHI validates wake phrase and executes the detected command.
