@@ -1,31 +1,30 @@
 import datetime as dt
 import os
-import re
-import shutil
-import subprocess
-from pathlib import Path
 from typing import Optional
 
+from .ai import AIResponder
+from .config import AppConfig
 from .memory import MemoryStore
+from .voice import VoiceEngine
 
 
 class AashiAssistant:
-    AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".aiff", ".aac"}
+    EXIT_SIGNAL = "EXIT"
 
-    def __init__(self, memory: Optional[MemoryStore] = None) -> None:
-        self.memory = memory or MemoryStore()
-        self._client = None
-        self._model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-        self._voice_files_dir = Path("save")
-
-        api_key = os.getenv("OPENAI_API_KEY")
-        if api_key:
-            try:
-                from openai import OpenAI
-
-                self._client = OpenAI(api_key=api_key)
-            except Exception:
-                self._client = None
+    def __init__(
+        self,
+        config: Optional[AppConfig] = None,
+        memory: Optional[MemoryStore] = None,
+        voice: Optional[VoiceEngine] = None,
+        ai: Optional[AIResponder] = None,
+    ) -> None:
+        self.config = config or AppConfig.from_env()
+        self.memory = memory or MemoryStore(self.config.memory_file)
+        self.voice = voice or VoiceEngine(self.config.voice_files_dir)
+        self.ai = ai or AIResponder(
+            model=self.config.openai_model,
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
 
     def greet(self) -> str:
         return (
@@ -45,10 +44,21 @@ class AashiAssistant:
         if not text:
             return "Say something and I will help."
 
+        command_reply = self._handle_command(text)
+        if command_reply is not None:
+            return command_reply
+
+        ai_reply = self.ai.reply(text)
+        if ai_reply:
+            return ai_reply
+
+        return self._fallback_reply(text)
+
+    def _handle_command(self, text: str) -> Optional[str]:
         lower = text.lower()
 
         if lower in {"exit", "quit"}:
-            return "EXIT"
+            return self.EXIT_SIGNAL
 
         if lower == "help":
             return self.help_text()
@@ -65,18 +75,14 @@ class AashiAssistant:
             notes = self.memory.notes()
             if not notes:
                 return "No notes saved yet."
-            lines = [f"{idx}. {note}" for idx, note in enumerate(notes, start=1)]
+            lines = [f"{index}. {note}" for index, note in enumerate(notes, start=1)]
             return "Saved notes:\n" + "\n".join(lines)
 
         if lower.startswith("save "):
-            note = text[5:].strip()
-            if not note:
-                return "Please provide text after 'save'."
-            self.memory.add_note(note)
-            return "Saved."
+            return self._handle_save_note(text)
 
         if lower == "voices":
-            voices = self.available_voices(limit=20)
+            voices = self.voice.available_system_voices(limit=30)
             if not voices:
                 return "No system voices found on this machine."
             return "Available voices:\n" + ", ".join(voices)
@@ -92,66 +98,71 @@ class AashiAssistant:
             self.memory.set_voice_enabled(False)
             return "Voice output disabled."
 
+        if lower.startswith("voice mode "):
+            return self._handle_voice_mode(text)
+
         if lower.startswith("voice "):
-            if lower.startswith("voice mode "):
-                mode = text[11:].strip().lower()
-                if mode not in {"system", "file"}:
-                    return "Use: voice mode system OR voice mode file"
-                self.memory.set_voice_mode(mode)
-                return f"Voice mode set to '{mode}'."
-            requested = text[6:].strip()
-            if not requested:
-                return "Use: voice <name>"
-            matched = self.match_voice_name(requested)
-            if not matched:
-                return "Voice not found. Type 'voices' to see available names."
-            self.memory.set_voice_name(matched)
-            return f"Voice set to '{matched}'. Use 'voice on' to hear responses."
+            return self._handle_system_voice(text)
 
         if lower == "voicefiles":
-            files = self.available_voice_files(limit=50)
+            files = self.voice.available_voice_files(limit=50)
             if not files:
                 return "No audio files found in ./save. Add .wav or .mp3 files there."
             return "Voice files in ./save:\n" + ", ".join(files)
 
         if lower.startswith("voicefile "):
-            requested_file = text[10:].strip()
-            if not requested_file:
-                return "Use: voicefile <filename>"
-            matched_file = self.match_voice_file(requested_file)
-            if not matched_file:
-                return "File not found in ./save. Type 'voicefiles' to see available files."
-            self.memory.set_voice_file(matched_file)
-            self.memory.set_voice_mode("file")
-            return f"Voice file set to '{matched_file}'. Mode switched to 'file'."
+            return self._handle_voice_file(text)
 
-        ai_reply = self._ask_openai(text)
-        if ai_reply:
-            return ai_reply
+        return None
 
-        return self._fallback_reply(text)
+    def _handle_save_note(self, text: str) -> str:
+        note = text[5:].strip()
+        if not note:
+            return "Please provide text after 'save'."
+        self.memory.add_note(note)
+        return "Saved."
 
-    def _ask_openai(self, prompt: str) -> Optional[str]:
-        if not self._client:
-            return None
+    def _handle_voice_mode(self, text: str) -> str:
+        mode = text[11:].strip().lower()
+        if mode not in {"system", "file"}:
+            return "Use: voice mode system OR voice mode file"
+        self.memory.set_voice_mode(mode)
+        return f"Voice mode set to '{mode}'."
 
-        try:
-            response = self._client.responses.create(
-                model=self._model,
-                input=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are Aashi, a concise personal AI assistant. "
-                            "Be practical, clear, and helpful."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            return response.output_text.strip()
-        except Exception:
-            return None
+    def _handle_system_voice(self, text: str) -> str:
+        requested = text[6:].strip()
+        if not requested:
+            return "Use: voice <name>"
+
+        matched = self.voice.match_system_voice(requested)
+        if not matched:
+            return "Voice not found. Type 'voices' to see available names."
+
+        self.memory.set_voice_name(matched)
+        return f"Voice set to '{matched}'. Use 'voice on' to hear responses."
+
+    def _handle_voice_file(self, text: str) -> str:
+        requested_file = text[10:].strip()
+        if not requested_file:
+            return "Use: voicefile <filename>"
+
+        matched_file = self.voice.match_voice_file(requested_file)
+        if not matched_file:
+            return "File not found in ./save. Type 'voicefiles' to see available files."
+
+        self.memory.set_voice_file(matched_file)
+        self.memory.set_voice_mode("file")
+        return f"Voice file set to '{matched_file}'. Mode switched to 'file'."
+
+    def speak(self, text: str) -> None:
+        if not self.memory.voice_enabled():
+            return
+
+        if self.memory.voice_mode() == "file":
+            self.voice.play_file(self.memory.voice_file())
+            return
+
+        self.voice.speak_system(self.memory.voice_name(), text)
 
     def _fallback_reply(self, prompt: str) -> str:
         return (
@@ -159,95 +170,3 @@ class AashiAssistant:
             "For smarter answers, set OPENAI_API_KEY. "
             f"You said: {prompt}"
         )
-
-    def available_voices(self, limit: int = 50) -> list[str]:
-        if not shutil.which("say"):
-            return []
-        try:
-            result = subprocess.run(
-                ["say", "-v", "?"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                return []
-            names: list[str] = []
-            for line in result.stdout.splitlines():
-                match = re.match(r"^(.*?)\s{2,}[a-z]{2}_[A-Z]{2}\s+#", line)
-                name = match.group(1).strip() if match else ""
-                if name:
-                    names.append(name)
-                if len(names) >= limit:
-                    break
-            return names
-        except OSError:
-            return []
-
-    def match_voice_name(self, requested: str) -> Optional[str]:
-        requested_lower = requested.lower()
-        for voice in self.available_voices(limit=200):
-            if voice.lower() == requested_lower:
-                return voice
-        return None
-
-    def speak(self, text: str) -> None:
-        if not self.memory.voice_enabled():
-            return
-        if self.memory.voice_mode() == "file":
-            self._play_voice_file()
-            return
-        if not shutil.which("say"):
-            return
-        voice = self.memory.voice_name()
-        try:
-            subprocess.run(
-                ["say", "-v", voice, text],
-                check=False,
-                capture_output=True,
-            )
-        except OSError:
-            return
-
-    def available_voice_files(self, limit: int = 50) -> list[str]:
-        if not self._voice_files_dir.exists() or not self._voice_files_dir.is_dir():
-            return []
-        files: list[str] = []
-        for path in sorted(self._voice_files_dir.iterdir()):
-            if path.is_file() and path.suffix.lower() in self.AUDIO_EXTENSIONS:
-                files.append(path.name)
-            if len(files) >= limit:
-                break
-        return files
-
-    def match_voice_file(self, requested: str) -> Optional[str]:
-        requested_lower = requested.lower()
-        for filename in self.available_voice_files(limit=200):
-            if filename.lower() == requested_lower:
-                return filename
-        return None
-
-    def _play_voice_file(self) -> None:
-        filename = self.memory.voice_file()
-        if not filename:
-            return
-        file_path = self._voice_files_dir / filename
-        if not file_path.exists():
-            return
-        try:
-            if shutil.which("afplay"):
-                subprocess.run(
-                    ["afplay", str(file_path)],
-                    check=False,
-                    capture_output=True,
-                )
-                return
-            if shutil.which("ffplay"):
-                subprocess.run(
-                    ["ffplay", "-nodisp", "-autoexit", "-loglevel", "error", str(file_path)],
-                    check=False,
-                    capture_output=True,
-                )
-                return
-        except OSError:
-            return

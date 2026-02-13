@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+
+# Local runtime state
+aashi_memory.json
+
+# Local user voice assets
+save/*
+!save/.gitkeep

@@ -3,92 +3,100 @@ from pathlib import Path
 from typing import Any
 
 
+DEFAULT_STATE: dict[str, Any] = {
+    "notes": [],
+    "voice": {
+        "enabled": False,
+        "name": "Samantha",
+        "mode": "system",
+        "file": "",
+    },
+}
+
+
 class MemoryStore:
-    def __init__(self, memory_file: str = "aashi_memory.json") -> None:
-        self.path = Path(memory_file)
-        self.data: dict[str, Any] = {
-            "notes": [],
-            "voice": {
-                "enabled": False,
-                "name": "Samantha",
-                "mode": "system",
-                "file": "",
-            },
-        }
+    def __init__(self, memory_file: Path) -> None:
+        self.path = memory_file
+        self.data: dict[str, Any] = {}
         self._load()
 
     def _load(self) -> None:
         if not self.path.exists():
+            self.data = json.loads(json.dumps(DEFAULT_STATE))
             return
 
         try:
-            with self.path.open("r", encoding="utf-8") as f:
-                loaded = json.load(f)
-            if isinstance(loaded, dict):
-                self.data = loaded
-                self.data.setdefault("notes", [])
-                self.data.setdefault("voice", {})
-                self.data["voice"].setdefault("enabled", False)
-                self.data["voice"].setdefault("name", "Samantha")
-                self.data["voice"].setdefault("mode", "system")
-                self.data["voice"].setdefault("file", "")
+            with self.path.open("r", encoding="utf-8") as handle:
+                loaded = json.load(handle)
         except (OSError, json.JSONDecodeError):
-            self.data = {
-                "notes": [],
-                "voice": {
-                    "enabled": False,
-                    "name": "Samantha",
-                    "mode": "system",
-                    "file": "",
-                },
-            }
+            self.data = json.loads(json.dumps(DEFAULT_STATE))
+            return
+
+        if not isinstance(loaded, dict):
+            self.data = json.loads(json.dumps(DEFAULT_STATE))
+            return
+
+        self.data = loaded
+        self._normalize()
+
+    def _normalize(self) -> None:
+        self.data.setdefault("notes", [])
+
+        voice = self.data.setdefault("voice", {})
+        if not isinstance(voice, dict):
+            voice = {}
+            self.data["voice"] = voice
+
+        voice.setdefault("enabled", False)
+        voice.setdefault("name", "Samantha")
+        voice.setdefault("mode", "system")
+        voice.setdefault("file", "")
+
+        if voice["mode"] not in {"system", "file"}:
+            voice["mode"] = "system"
 
     def save(self) -> None:
-        with self.path.open("w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=2)
-
-    def add_note(self, text: str) -> None:
-        self.data.setdefault("notes", []).append(text)
-        self.save()
+        self._normalize()
+        with self.path.open("w", encoding="utf-8") as handle:
+            json.dump(self.data, handle, indent=2)
 
     def notes(self) -> list[str]:
-        return list(self.data.get("notes", []))
+        raw = self.data.get("notes", [])
+        if not isinstance(raw, list):
+            return []
+        return [str(item) for item in raw]
 
-    def voice_enabled(self) -> bool:
-        voice = self.data.get("voice", {})
-        return bool(voice.get("enabled", False))
-
-    def voice_name(self) -> str:
-        voice = self.data.get("voice", {})
-        return str(voice.get("name", "Samantha"))
-
-    def set_voice_enabled(self, enabled: bool) -> None:
-        self.data.setdefault("voice", {})
-        self.data["voice"]["enabled"] = enabled
+    def add_note(self, text: str) -> None:
+        notes = self.notes()
+        notes.append(text)
+        self.data["notes"] = notes
         self.save()
 
+    def voice_enabled(self) -> bool:
+        return bool(self.data.get("voice", {}).get("enabled", False))
+
+    def set_voice_enabled(self, enabled: bool) -> None:
+        self.data.setdefault("voice", {})["enabled"] = enabled
+        self.save()
+
+    def voice_name(self) -> str:
+        return str(self.data.get("voice", {}).get("name", "Samantha"))
+
     def set_voice_name(self, name: str) -> None:
-        self.data.setdefault("voice", {})
-        self.data["voice"]["name"] = name
+        self.data.setdefault("voice", {})["name"] = name
         self.save()
 
     def voice_mode(self) -> str:
-        voice = self.data.get("voice", {})
-        mode = str(voice.get("mode", "system"))
-        if mode not in {"system", "file"}:
-            return "system"
-        return mode
+        mode = str(self.data.get("voice", {}).get("mode", "system"))
+        return mode if mode in {"system", "file"} else "system"
 
     def set_voice_mode(self, mode: str) -> None:
-        self.data.setdefault("voice", {})
-        self.data["voice"]["mode"] = mode
+        self.data.setdefault("voice", {})["mode"] = mode
         self.save()
 
     def voice_file(self) -> str:
-        voice = self.data.get("voice", {})
-        return str(voice.get("file", ""))
+        return str(self.data.get("voice", {}).get("file", ""))
 
     def set_voice_file(self, filename: str) -> None:
-        self.data.setdefault("voice", {})
-        self.data["voice"]["file"] = filename
+        self.data.setdefault("voice", {})["file"] = filename
         self.save()

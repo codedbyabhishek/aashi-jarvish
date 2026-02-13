@@ -13,8 +13,7 @@ def main() -> None:
             break
 
         reply = assistant.handle(user_input)
-
-        if reply == "EXIT":
+        if reply == assistant.EXIT_SIGNAL:
             print("Aashi: Goodbye.")
             break
 
