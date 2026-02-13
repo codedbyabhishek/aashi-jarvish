@@ -43,6 +43,8 @@ class IntentRouter:
             return Intent("clone_train", payload)
         if lower == "clone status":
             return Intent("clone_status")
+        if lower.startswith("clone say "):
+            return Intent("clone_say", {"text": text[10:].strip()})
 
         if lower.startswith("listen "):
             return Intent("voice_input", {"filename": text[7:].strip()})

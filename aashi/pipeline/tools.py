@@ -132,6 +132,20 @@ class ToolExecutor:
                 return ExecutionResult(True, f"Clone voice ready: '{clone_name}' (id: {clone_id[:8]}...).")
             return ExecutionResult(True, "Clone voice not configured. Use: clonevoice <filename> [name]")
 
+        if kind == "clone_say":
+            text = str(payload.get("text", "")).strip()
+            if not text:
+                return ExecutionResult(True, "Use: clone say <text>")
+            if not self.assistant.clone_voice.has_api_key():
+                return ExecutionResult(True, "ELEVENLABS_API_KEY is missing. Run: setup elevenlabs")
+            clone_id = self.assistant.memory.clone_voice_id()
+            if not clone_id:
+                return ExecutionResult(True, "No clone voice configured. Run: clonevoice <filename> [name]")
+            ok, message = self.assistant.clone_voice.speak(text, clone_id)
+            if not ok:
+                return ExecutionResult(True, f"Clone playback failed: {message}")
+            return ExecutionResult(True, "Clone voice playback completed.")
+
         if kind == "voice_input":
             filename = str(payload.get("filename", "")).strip()
             if not filename:

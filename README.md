@@ -95,12 +95,19 @@ export OPENAI_API_KEY="your_key_here"
 export ELEVENLABS_API_KEY="your_key_here"
 ```
 
+You can also place keys in `.env` (auto-loaded at app startup):
+```bash
+OPENAI_API_KEY=your_openai_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
+```
+
 ### Your Own Voice File
 Put `.wav`/`.mp3` in `./save`, then in Aashi:
 - `voicefile yourfile.wav`
 - `clonevoice yourfile.wav Aashi Clone` (optional)
 - `voice mode clone` (or `voice mode file`)
 - `voice on`
+- `clone say testing clone playback`
 
 ## Wake-Word Flow (File Voice Input)
 1. Add voice sample in `./save`.

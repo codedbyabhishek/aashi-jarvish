@@ -4,6 +4,7 @@ from typing import Optional
 from .ai import AIResponder
 from .clone_voice import CloneVoiceEngine
 from .config import AppConfig
+from .env_loader import load_local_env_files
 from .memory import MemoryStore
 from .pipeline import AIBrain, InputLayer, IntentRouter, ResponseGenerator, TaskPlanner, ToolExecutor
 from .system_control import SystemController
@@ -24,6 +25,7 @@ class AashiAssistant:
         voice_input: Optional[VoiceInputEngine] = None,
         system_control: Optional[SystemController] = None,
     ) -> None:
+        load_local_env_files()
         self.config = config or AppConfig.from_env()
 
         self.memory = memory or MemoryStore(self.config.memory_file)
@@ -59,7 +61,7 @@ class AashiAssistant:
         return (
             "Commands: help, time, date, notes, save <text>, voices, voice <name>, voice on, voice off,\n"
             "voice mode <system|file|clone>, voicefiles, voicefile <filename>, listen <filename>,\n"
-            "clonevoice <filename> [name], clone status,\n"
+            "clonevoice <filename> [name], clone status, clone say <text>,\n"
             "wake on, wake off, wake status, wake phrase <text>,\n"
             "setup openai, setup elevenlabs, setup status,\n"
             "open app <name>, open web <url>, search web <query>, run shortcut <name>, exit\n"
